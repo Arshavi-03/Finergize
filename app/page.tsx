@@ -477,7 +477,7 @@ export default function Home(): JSX.Element {
       title: "Financial Education",
       description: "Learn about savings and investments",
       gradient: "from-cyan-500/20 via-transparent to-transparent",
-      href: "/education"
+      href: "/banking/education"
     }
   ];
 
