@@ -1,75 +1,124 @@
+// File: components/ui/SparklesBackground.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 
-const random = (min: number, max: number) => Math.floor(Math.random() * (max - min) + min);
+class Particle {
+  x: number = 0;
+  y: number = 0;
+  size: number = 0;
+  speed: number = 0;
+  opacity: number = 0;
+  color: string = '';
 
-interface SparkleProps {
-  delay: number;
+  constructor(canvasWidth: number, canvasHeight: number) {
+    this.reset(canvasWidth, canvasHeight);
+  }
+  
+  reset(canvasWidth: number, canvasHeight: number): void {
+    this.x = Math.random() * canvasWidth;
+    this.y = Math.random() * canvasHeight;
+    this.size = Math.random() * 2 + 0.5;
+    this.speed = Math.random() * 0.2 + 0.1;
+    this.opacity = Math.random() * 0.5 + 0.1;
+    this.color = `rgba(${Math.random() * 50 + 100}, ${Math.random() * 50 + 150}, ${Math.random() * 50 + 200}, ${this.opacity})`;
+  }
+  
+  update(canvasHeight: number, canvasWidth: number): void {
+    this.y -= this.speed;
+    
+    // Reset particle when it goes off screen
+    if (this.y < 0) {
+      this.y = canvasHeight;
+      this.x = Math.random() * canvasWidth;
+    }
+  }
+  
+  draw(ctx: CanvasRenderingContext2D): void {
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
-const Sparkle = ({ delay }: SparkleProps) => {
-  const size = random(2, 4);
-  const left = random(0, 100);
-  const top = random(0, 100);
-  const opacity = Math.random() * 0.5 + 0.2; // Random opacity between 0.2 and 0.7
-
-  return (
-    <motion.div
-      style={{
-        position: 'absolute',
-        left: `${left}%`,
-        top: `${top}%`,
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        backgroundColor: 'white',
-      }}
-      initial={{ opacity: 0, scale: 0 }}
-      animate={{
-        opacity: [0, opacity, 0],
-        scale: [0, 1, 0],
-      }}
-      transition={{
-        duration: 2,
-        delay,
-        repeat: Infinity,
-        repeatDelay: random(2, 8),
-      }}
-    />
-  );
-};
-
-export const SparklesBackground = () => {
-  const [sparkles] = useState(() => 
-    Array.from({ length: 50 }, (_, i) => ({
-      id: i,
-      delay: random(0, 10),
-    }))
-  );
-
-  return (
-    <div className="fixed inset-0 -z-10 overflow-hidden">
-      {/* Grid background with dark gradient overlay */}
-      <div 
-        className="absolute inset-0 bg-[url('/grid.svg')] bg-repeat opacity-20"
-        style={{
-          backgroundSize: '40px 40px',
-          maskImage: 'radial-gradient(circle at center, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.2) 70%, transparent 100%)',
-        }}
-      />
+const SparklesBackground: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    let particles: Particle[] = [];
+    let canvasWidth = window.innerWidth;
+    let canvasHeight = window.innerHeight;
+    
+    const resizeCanvas = () => {
+      if (canvas) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        canvasWidth = canvas.width;
+        canvasHeight = canvas.height;
+        
+        // Re-initialize particles on resize
+        initParticles();
+      }
+    };
+    
+    // Set up the canvas
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    
+    // Initialize particles
+    const initParticles = () => {
+      particles = [];
+      const particleCount = Math.min(150, Math.floor(canvasWidth * canvasHeight / 10000));
       
-      {/* Sparkles container */}
-      <div className="absolute inset-0">
-        {sparkles.map((sparkle) => (
-          <Sparkle key={sparkle.id} delay={sparkle.delay} />
-        ))}
-      </div>
-
-      {/* Color overlays */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/30 via-purple-900/30 to-pink-900/30 animate-gradient-slow"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-gray-900 to-black opacity-80"></div>
+      for (let i = 0; i < particleCount; i++) {
+        particles.push(new Particle(canvasWidth, canvasHeight));
+      }
+    };
+    
+    initParticles();
+    
+    // Animation loop
+    const animate = () => {
+      if (!ctx || !canvas) return;
+      
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+      
+      particles.forEach(particle => {
+        particle.update(canvasHeight, canvasWidth);
+        particle.draw(ctx);
+      });
+      
+      requestAnimationFrame(animate);
+    };
+    
+    animate();
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+    };
+  }, []);
+  
+  return (
+    <div className="fixed inset-0 -z-10">
+      <motion.div 
+        className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-gray-900 to-black"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1 }}
+      />
+      <canvas 
+        ref={canvasRef} 
+        className="fixed inset-0 -z-10"
+      />
     </div>
   );
 };
