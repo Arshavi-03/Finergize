@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "commonjs",
+  "type":"module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,6 +11,7 @@
     "lint": "next lint",
     "seed": "node scripts/seedLoanProviders.js",
     "seed:mutual-funds": "node scripts/seed-mutual-funds.js",
+    "seed:courses": "node --experimental-modules scripts/seed-courses.js",
     "seed:all": "node scripts/seedLoanProviders.js && node scripts/seed-mutual-funds.js"
   },
   "dependencies": {

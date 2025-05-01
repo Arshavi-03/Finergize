@@ -1,6 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { getAllCourses, getCoursesByCategory } from '@/services/courseService';
+import { CourseContent, CourseModule } from '@/types/course';
+import Link from 'next/link';
 
 // Define the types for our content
 interface VideoContent {
@@ -22,42 +26,6 @@ interface GameContent {
   difficulty: 'easy' | 'medium' | 'hard';
   icon: string; // Emoji or icon
   bgColor: string; // CSS background color
-}
-
-interface QuizQuestion {
-  id: string;
-  question: string;
-  options: string[];
-  correctAnswer: number;
-  explanation: string;
-}
-
-interface QuizContent {
-  id: string;
-  title: string;
-  description: string;
-  questions: QuizQuestion[];
-  category: 'savings' | 'investment' | 'budgeting' | 'credit';
-  icon: string; // Emoji or icon
-  bgColor: string; // CSS background color
-}
-
-interface CourseModule {
-  id: string;
-  title: string;
-  description: string;
-  videoId: string; // YouTube video ID
-  duration: string;
-}
-
-interface CourseContent {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  icon: string;
-  bgColor: string;
-  modules: CourseModule[];
 }
 
 // Sample data for our application
@@ -104,268 +72,13 @@ const videos: VideoContent[] = [
   },
 ];
 
-// New courses data
-const courses: CourseContent[] = [
-  {
-    id: 'c1',
-    title: 'Stock Market Basics',
-    description: 'Learn the fundamentals of how stock markets operate and the key concepts every investor should know',
-    category: 'investing',
-    icon: '📊',
-    bgColor: 'from-blue-600 to-blue-900',
-    modules: [
-      {
-        id: 'c1-m1',
-        title: 'Introduction to Stocks',
-        description: 'Understanding what stocks are and how the stock market works',
-        videoId: 'p7HKvqRI_Bo',
-        duration: '8:42'
-      },
-      {
-        id: 'c1-m2',
-        title: 'How to Read Stock Charts',
-        description: 'Learning the essentials of understanding stock price charts and key indicators',
-        videoId: 'cQiPUHgKBNg',
-        duration: '12:15'
-      },
-      {
-        id: 'c1-m3',
-        title: 'Building Your First Portfolio',
-        description: 'Strategies for creating a diversified starter portfolio',
-        videoId: 'Kab5YNoqCZQ',
-        duration: '10:37'
-      }
-    ]
-  },
-  {
-    id: 'c2',
-    title: 'Technical Analysis',
-    description: 'Master the art of analyzing stock price movements and patterns to predict future price movements',
-    category: 'investing',
-    icon: '📉',
-    bgColor: 'from-purple-600 to-purple-900',
-    modules: [
-      {
-        id: 'c2-m1',
-        title: 'Support and Resistance Levels',
-        description: 'Understanding key price levels that act as barriers to price movement',
-        videoId: 'tkwUOCNmfxE',
-        duration: '9:18'
-      },
-      {
-        id: 'c2-m2',
-        title: 'Trend Lines and Chart Patterns',
-        description: 'Identifying and interpreting common chart formations',
-        videoId: 'eynxyoKgpng',
-        duration: '15:24'
-      },
-      {
-        id: 'c2-m3',
-        title: 'Moving Averages and Indicators',
-        description: 'Using technical indicators to enhance your analysis',
-        videoId: 'TL0sB-HGMWk',
-        duration: '11:49'
-      }
-    ]
-  },
-  {
-    id: 'c3',
-    title: 'Market Trends',
-    description: 'Understand how market trends develop and how to position your investments accordingly',
-    category: 'investing',
-    icon: '📈',
-    bgColor: 'from-green-600 to-green-900',
-    modules: [
-      {
-        id: 'c3-m1',
-        title: 'Bull vs Bear Markets',
-        description: 'Understanding the characteristics of different market cycles',
-        videoId: 'tKxgvY1z8eM',
-        duration: '7:52'
-      },
-      {
-        id: 'c3-m2',
-        title: 'Sector Rotation',
-        description: 'How different market sectors perform throughout economic cycles',
-        videoId: 'fgI1DqUGFEM',
-        duration: '10:05'
-      }
-    ]
-  },
-  {
-    id: 'c4',
-    title: 'Stock Valuation',
-    description: 'Learn various methods to determine whether a stock is overvalued or undervalued',
-    category: 'investing',
-    icon: '🔍',
-    bgColor: 'from-yellow-600 to-yellow-900',
-    modules: [
-      {
-        id: 'c4-m1',
-        title: 'Price-to-Earnings Ratio',
-        description: 'Understanding the most common valuation metric used by investors',
-        videoId: 'cI8ZSf0nxFs',
-        duration: '8:36'
-      },
-      {
-        id: 'c4-m2',
-        title: 'Discounted Cash Flow Analysis',
-        description: 'Calculating the intrinsic value of a stock based on future cash flows',
-        videoId: '8j9Sj8_SkPI',
-        duration: '14:27'
-      },
-      {
-        id: 'c4-m3',
-        title: 'Comparative Valuation Methods',
-        description: 'Using industry comparisons to evaluate stock prices',
-        videoId: 'NQ2WrVua6mg',
-        duration: '9:55'
-      }
-    ]
-  },
-  {
-    id: 'c5',
-    title: 'Financial News Impact',
-    description: 'Understand how news events affect financial markets and how to interpret market reactions',
-    category: 'market-analysis',
-    icon: '📰',
-    bgColor: 'from-red-600 to-red-900',
-    modules: [
-      {
-        id: 'c5-m1',
-        title: 'Economic Indicators',
-        description: 'Key economic reports and how they move markets',
-        videoId: 'iKxFysXmCPo',
-        duration: '11:03'
-      },
-      {
-        id: 'c5-m2',
-        title: 'Earnings Reports',
-        description: 'How to read quarterly earnings reports and understand their impact',
-        videoId: 'W-NbQJJgfSA',
-        duration: '9:48'
-      }
-    ]
-  },
-  {
-    id: 'c6',
-    title: 'Banking Services',
-    description: 'Discover the range of banking products and services available and how to use them effectively',
-    category: 'banking',
-    icon: '🏦',
-    bgColor: 'from-indigo-600 to-indigo-900',
-    modules: [
-      {
-        id: 'c6-m1',
-        title: 'Types of Bank Accounts',
-        description: 'Understanding checking, savings, and other account types',
-        videoId: 'YHYj87sr7Ws',
-        duration: '7:16'
-      },
-      {
-        id: 'c6-m2',
-        title: 'Loans and Credit Products',
-        description: 'Navigating the world of loans, credit cards, and lines of credit',
-        videoId: 'S9pCGB7XD1U',
-        duration: '12:30'
-      },
-      {
-        id: 'c6-m3',
-        title: 'Digital Banking Tools',
-        description: 'Maximizing the benefits of online and mobile banking',
-        videoId: 'v2jxhmXGX9Y',
-        duration: '8:42'
-      }
-    ]
-  },
-  {
-    id: 'c7',
-    title: 'Credit Risk',
-    description: 'Learn how to analyze credit risk and understand factors that predict default probability',
-    category: 'banking',
-    icon: '⚠️',
-    bgColor: 'from-orange-600 to-orange-900',
-    modules: [
-      {
-        id: 'c7-m1',
-        title: 'Credit Scores Explained',
-        description: 'Understanding what goes into your credit score and how to improve it',
-        videoId: 'Vn9ounAgG3w',
-        duration: '10:14'
-      },
-      {
-        id: 'c7-m2',
-        title: 'Debt-to-Income Ratios',
-        description: 'The key metrics lenders use to evaluate borrowers',
-        videoId: 'k-VS_ZpH-Gg',
-        duration: '7:55'
-      }
-    ]
-  },
-  {
-    id: 'c8',
-    title: 'Index Analysis',
-    description: 'Understanding market indices, their composition, and what they tell us about the market',
-    category: 'market-analysis',
-    icon: '📋',
-    bgColor: 'from-teal-600 to-teal-900',
-    modules: [
-      {
-        id: 'c8-m1',
-        title: 'Major Market Indices',
-        description: 'Understanding the S&P 500, Dow Jones, NASDAQ, and other key indices',
-        videoId: 'vGZlwWrD-JI',
-        duration: '9:37'
-      },
-      {
-        id: 'c8-m2',
-        title: 'Index Investing Strategies',
-        description: 'How to build a portfolio based on index investing',
-        videoId: 'Kic2X9glKX0',
-        duration: '13:22'
-      },
-      {
-        id: 'c8-m3',
-        title: 'Index Weighting Methodologies',
-        description: 'How different indices are calculated and what it means for investors',
-        videoId: 'Y8hVrw1QGTk',
-        duration: '8:50'
-      }
-    ]
-  },
-  {
-    id: 'c9',
-    title: 'Sector Distribution',
-    description: 'Learn about different industry sectors, their characteristics, and market representation',
-    category: 'market-analysis',
-    icon: '🏭',
-    bgColor: 'from-pink-600 to-pink-900',
-    modules: [
-      {
-        id: 'c9-m1',
-        title: 'The 11 Market Sectors',
-        description: 'An overview of the major market sectors and their key characteristics',
-        videoId: 'tTMxO5jBqFk',
-        duration: '11:28'
-      },
-      {
-        id: 'c9-m2',
-        title: 'Cyclical vs Defensive Sectors',
-        description: 'Understanding how different sectors perform in various economic conditions',
-        videoId: 'qHrQ5DP9W2c',
-        duration: '9:42'
-      }
-    ]
-  }
-];
-
 // Using gradient backgrounds and icons instead of images
 const games: GameContent[] = [
   {
     id: 'g1',
     title: 'Stock Market Simulator',
     description: 'Practice investing with virtual money before risking real funds in the market',
-    gameUrl: '/games/stock-simulator', // Correct URL
+    gameUrl: '/games/stock-simulator',
     difficulty: 'medium',
     icon: '📊',
     bgColor: 'from-indigo-600 to-indigo-900'
@@ -374,7 +87,7 @@ const games: GameContent[] = [
     id: 'g2',
     title: 'Budget Escape Room',
     description: 'Solve financial puzzles to escape from a debt crisis in this immersive game',
-    gameUrl: '/games/budget-escape', // This is correct already
+    gameUrl: '/games/budget-escape',
     difficulty: 'hard',
     icon: '🔐',
     bgColor: 'from-red-600 to-red-900'
@@ -383,7 +96,7 @@ const games: GameContent[] = [
     id: 'g3',
     title: 'Money Flow Adventure',
     description: 'Guide your money through different financial scenarios in this fun adventure game',
-    gameUrl: '/games/money-fall', // This is correct already
+    gameUrl: '/games/money-fall',
     difficulty: 'easy',
     icon: '🏦',
     bgColor: 'from-green-600 to-green-900'
@@ -396,8 +109,7 @@ export default function FinancialEducationPage() {
   const [activeSection, setActiveSection] = useState<'videos' | 'courses' | 'games' | 'quiz-redirect'>('videos');
   const [currentVideo, setCurrentVideo] = useState<VideoContent | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
-  const [currentCourseVideo, setCurrentCourseVideo] = useState<{courseId: string, module: CourseModule} | null>(null);
+  const [courses, setCourses] = useState<CourseContent[]>([]);
   const [courseFilter, setCourseFilter] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("");
 
@@ -406,37 +118,47 @@ export default function FinancialEducationPage() {
   const coursesRef = useRef<HTMLDivElement>(null);
   const gamesRef = useRef<HTMLDivElement>(null);
   const quizRedirectRef = useRef<HTMLDivElement>(null);
+  
+  // Router for navigation
+  const router = useRouter();
 
- // Fetch user info on component mount
+  // Fetch user info and courses on component mount
   useEffect(() => {
-    const fetchUserInfo = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
         
-        // Fetch session directly
-        const response = await fetch('/api/auth/session');
-        if (!response.ok) {
-          setUserName("Guest User");
-          return;
-        }
-        
-        const session = await response.json();
-        
-        if (session && session.user && session.user.name) {
-          setUserName(session.user.name);
+        // Fetch session
+        const sessionResponse = await fetch('/api/auth/session');
+        if (sessionResponse.ok) {
+          const session = await sessionResponse.json();
+          if (session && session.user && session.user.name) {
+            setUserName(session.user.name);
+          } else {
+            setUserName("Guest User");
+          }
         } else {
           setUserName("Guest User");
         }
+        
+        // Fetch courses
+        let coursesData;
+        if (courseFilter) {
+          coursesData = await getCoursesByCategory(courseFilter);
+        } else {
+          coursesData = await getAllCourses();
+        }
+        setCourses(coursesData);
       } catch (error) {
-        console.error("Error fetching session:", error);
+        console.error("Error fetching data:", error);
         setUserName("Guest User");
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchUserInfo();
-  }, []);
+    fetchData();
+  }, [courseFilter]);
 
   // Add custom animation classes
   useEffect(() => {
@@ -484,30 +206,12 @@ export default function FinancialEducationPage() {
   };
 
   // Course functions
-  const toggleCourseExpand = (courseId: string) => {
-    if (expandedCourse === courseId) {
-      setExpandedCourse(null);
-    } else {
-      setExpandedCourse(courseId);
-    }
-  };
-
-  const playCourseVideo = (courseId: string, module: CourseModule) => {
-    setCurrentCourseVideo({ courseId, module });
-  };
-
-  const closeCourseVideo = () => {
-    setCurrentCourseVideo(null);
+  const navigateToCourse = (courseId: string) => {
+    router.push(`/courses/${courseId}`);
   };
 
   const filterCourses = (category: string | null) => {
     setCourseFilter(category);
-  };
-
-  // Get filtered courses
-  const getFilteredCourses = () => {
-    if (!courseFilter) return courses;
-    return courses.filter(course => course.category === courseFilter);
   };
 
   // Render level badge for videos
@@ -732,87 +436,62 @@ export default function FinancialEducationPage() {
               </button>
             </div>
             
-            <div className="space-y-6">
-              {getFilteredCourses().map((course, idx) => (
-                <div 
-                  key={course.id} 
-                  className="bg-gray-800 bg-opacity-60 rounded-xl overflow-hidden border border-gray-700 hover:border-blue-500 transition-colors"
-                >
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+              </div>
+            ) : courses.length === 0 ? (
+              <div className="bg-gray-800 bg-opacity-60 rounded-xl p-8 text-center">
+                <p className="text-gray-300">No courses found. Please try a different category.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {courses.map((course, idx) => (
                   <div 
-                    className="p-6 cursor-pointer"
-                    onClick={() => toggleCourseExpand(course.id)}
+                    key={course._id} 
+                    className="bg-gray-800 bg-opacity-60 rounded-xl overflow-hidden border border-gray-700 hover:border-blue-500 transition-colors flex flex-col hover:shadow-lg"
                   >
-                    <div className="flex items-start">
-                      <div className={`w-16 h-16 flex-shrink-0 rounded-lg bg-gradient-to-br ${course.bgColor} flex items-center justify-center mr-4`}>
-                        <span className="text-4xl">{course.icon}</span>
+                    <div className={`h-40 relative bg-gradient-to-br ${course.bgColor}`}>
+                      {/* Pattern overlay */}
+                      <div className="absolute inset-0" style={{
+                        backgroundImage: generatePattern(idx, course._id)
+                      }}></div>
+                      
+                      {/* Icon */}
+                      <div className="flex items-center justify-center h-full">
+                        <span className="text-8xl opacity-50">{course.icon}</span>
                       </div>
-                      <div className="flex-grow">
-                        <div className="flex justify-between items-center">
-                          <h3 className="text-xl font-bold text-white mb-1">{course.title}</h3>
-                          <button 
-                            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
-                          >
-                            <svg 
-                              xmlns="http://www.w3.org/2000/svg" 
-                              className={`h-5 w-5 text-blue-300 transition-transform ${expandedCourse === course.id ? 'rotate-180' : ''}`} 
-                              viewBox="0 0 20 20" 
-                              fill="currentColor"
-                            >
-                              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                            </svg>
-                          </button>
-                        </div>
-                        <p className="text-gray-300 text-sm mb-2">{course.description}</p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs bg-blue-900 text-blue-200 px-2 py-1 rounded">
-                            {course.category.charAt(0).toUpperCase() + course.category.slice(1).replace('-', ' ')}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            {course.modules.length} modules
-                          </span>
-                        </div>
+                      
+                      <div className="absolute top-2 right-2">
+                        <span className="text-xs bg-blue-900 text-blue-200 px-2 py-1 rounded">
+                          {course.category.charAt(0).toUpperCase() + course.category.slice(1).replace('-', ' ')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 flex-grow flex flex-col">
+                      <h3 className="text-xl font-bold mb-2 text-white">
+                        {course.title}
+                      </h3>
+                      <p className="text-gray-300 text-sm mb-4 flex-grow line-clamp-3">
+                        {course.description}
+                      </p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-400">
+                          {course.modules.length} modules
+                        </span>
+                        <button 
+                          onClick={() => navigateToCourse(course._id)}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-center transition-colors"
+                        >
+                          Explore Course
+                        </button>
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Modules - shown when expanded */}
-                  {expandedCourse === course.id && (
-                    <div className="border-t border-gray-700 px-6 py-4">
-                      <h4 className="text-lg font-semibold text-blue-300 mb-4">Course Modules</h4>
-                      <div className="space-y-4">
-                        {course.modules.map((module, moduleIdx) => (
-                          <div 
-                            key={module.id} 
-                            className="bg-gray-700 bg-opacity-50 rounded-lg p-4 transition-all hover:bg-gray-600"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h5 className="font-medium text-white">{module.title}</h5>
-                                <p className="text-sm text-gray-300 mt-1">{module.description}</p>
-                              </div>
-                              <div className="flex items-center space-x-3">
-                                <span className="text-xs text-gray-400">{module.duration}</span>
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    playCourseVideo(course.id, module);
-                                  }}
-                                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2 transition-colors"
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                                  </svg>
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
         
@@ -968,43 +647,6 @@ export default function FinancialEducationPage() {
             <div className="p-4">
               <h3 className="text-xl font-bold text-white mb-2">{currentVideo.title}</h3>
               <p className="text-gray-300">{currentVideo.description}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Course Video Modal */}
-      {currentCourseVideo && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4">
-          <div className="relative bg-gray-900 rounded-xl overflow-hidden max-w-4xl w-full">
-            <button 
-              onClick={closeCourseVideo}
-              className="absolute top-4 right-4 bg-gray-800 rounded-full p-2 z-10"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            
-            <div className="relative pb-[56.25%]"> {/* 16:9 aspect ratio */}
-              <iframe 
-                className="absolute top-0 left-0 w-full h-full"
-                src={`https://www.youtube.com/embed/${currentCourseVideo.module.videoId}?autoplay=1`}
-                title={currentCourseVideo.module.title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
-            </div>
-            
-            <div className="p-4">
-              <div className="flex items-center mb-2">
-                <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded-full mr-2">
-                  {courses.find(c => c.id === currentCourseVideo.courseId)?.title}
-                </span>
-                <span className="text-xs text-gray-400">{currentCourseVideo.module.duration}</span>
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">{currentCourseVideo.module.title}</h3>
-              <p className="text-gray-300">{currentCourseVideo.module.description}</p>
             </div>
           </div>
         </div>
