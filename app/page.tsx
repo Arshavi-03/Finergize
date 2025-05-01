@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Wallet, Users, BookOpen, TrendingUp, Building, Phone, Clock, CreditCard, AlertCircle, Sparkles } from "lucide-react";
 import Link from "next/link";
-import React, { useState, useEffect, useRef, Suspense } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion, useScroll, useTransform, useMotionValueEvent, useMotionValue, useSpring, MotionValue } from "framer-motion";
 import dynamic from 'next/dynamic';
@@ -431,9 +431,37 @@ export default function Home(): JSX.Element {
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
 
-  // Ensure client-side only animations
+  // Ensure client-side only animations and fix hydration issues
   useEffect(() => {
     setHasMounted(true);
+    
+    // Remove any fdprocessedid attributes from the DOM after hydration
+    const removeFdProcessedIds = () => {
+      document.querySelectorAll('[fdprocessedid]').forEach(element => {
+        element.removeAttribute('fdprocessedid');
+      });
+    };
+    
+    // Run once after hydration
+    removeFdProcessedIds();
+    
+    // Also set up a mutation observer to handle dynamically added elements
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'fdprocessedid') {
+          const element = mutation.target as HTMLElement;
+          element.removeAttribute('fdprocessedid');
+        }
+      });
+    });
+    
+    observer.observe(document.body, {
+      attributes: true,
+      subtree: true,
+      attributeFilter: ['fdprocessedid']
+    });
+
+    return () => observer.disconnect();
   }, []);
 
   const features: FeatureItem[] = [
@@ -532,7 +560,7 @@ export default function Home(): JSX.Element {
   ];
 
   return (
-    <main className="min-h-screen bg-[#0A0A0A] relative overflow-hidden">
+    <main className="min-h-screen bg-[#0A0A0A] relative overflow-hidden" suppressHydrationWarning={true}>
       {/* Progress indicator - Only rendered on client */}
       {hasMounted && (
         <motion.div 

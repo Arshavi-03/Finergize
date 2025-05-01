@@ -39,6 +39,9 @@ interface LoanProvider {
   processingTime: string;
 }
 
+// Define valid loan types to fix TypeScript error
+type ValidLoanType = 'business' | 'agriculture' | 'education';
+
 export default function LoanProvidersPage() {
   const router = useRouter();
   const params = useParams();
@@ -47,7 +50,8 @@ export default function LoanProvidersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loanTitles = {
+  // Fix TypeScript error by ensuring loanType is a valid key
+  const loanTitles: Record<ValidLoanType, string> = {
     business: "Business Loan Providers",
     agriculture: "Agriculture Loan Providers",
     education: "Education Loan Providers"
@@ -94,6 +98,16 @@ export default function LoanProvidersPage() {
     );
   }
 
+  // Fix TypeScript error by safely accessing loanTitles
+  const getLoanTitle = (type: string): string => {
+    // Check if the type is a valid key in loanTitles
+    if (type in loanTitles) {
+      return loanTitles[type as ValidLoanType];
+    }
+    // Fallback title
+    return "Loan Providers";
+  };
+
   return (
     <main className="min-h-screen bg-black relative pb-20">
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-gray-900 to-black"></div>
@@ -105,22 +119,26 @@ export default function LoanProvidersPage() {
         </Link>
 
         <h1 className="text-3xl font-bold text-center mb-12 bg-gradient-to-r from-blue-400 to-purple-400 text-transparent bg-clip-text">
-          {loanTitles[loanType] || "Loan Providers"}
+          {getLoanTitle(loanType)}
         </h1>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {providers.map((provider) => (
             <Card key={provider._id} className="bg-gray-900/50 border-gray-800 overflow-hidden">
-            <CardHeader className="pb-4">
- <div className="flex items-center justify-center mb-4 p-4">
-   <img
-     src={provider.image}
-     alt={`${provider.name} logo`}
-     className="w-auto max-w-[200px] max-h-[100px] object-contain" 
-   />
- </div>
- <CardTitle className="text-xl text-center text-white">{provider.name}</CardTitle>
-</CardHeader>
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-center mb-4 p-4">
+                  <img
+                    src={provider.image || "/placeholder-logo.png"} // Fallback for missing images
+                    alt={`${provider.name} logo`}
+                    className="w-auto max-w-[200px] max-h-[100px] object-contain" 
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = "/placeholder-logo.png"; // Fallback image on error
+                    }}
+                  />
+                </div>
+                <CardTitle className="text-xl text-center text-white">{provider.name}</CardTitle>
+              </CardHeader>
 
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -201,11 +219,11 @@ export default function LoanProvidersPage() {
                 </Dialog>
 
                 <Button 
-  onClick={() => router.push(`/loans/apply/${provider._id}`)}
-  className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90"
->
-  Apply Now
-</Button>
+                  onClick={() => router.push(`/loans/apply/${provider._id}`)}
+                  className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90"
+                >
+                  Apply Now
+                </Button>
               </CardContent>
             </Card>
           ))}

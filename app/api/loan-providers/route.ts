@@ -1,4 +1,3 @@
-// app/api/loan-providers/route.ts
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/database/config';
 import { LoanProvider } from '@/models/LoanProvider';

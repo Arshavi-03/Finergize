@@ -74,7 +74,7 @@ export default function LoansPage() {
     {
       icon: <CreditCard className="h-6 w-6 text-amber-400" />,
       title: "Identity Proof",
-      description: "Valid Aadhaar card and basic KYC documents",
+      description: "Valid Aadhaar, PAN, or Voter ID card and basic KYC documents",
       gradient: "from-amber-500/20 via-transparent to-transparent"
     }
   ];

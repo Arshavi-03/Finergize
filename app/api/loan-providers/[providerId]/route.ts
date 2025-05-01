@@ -7,8 +7,16 @@ export async function GET(
   { params }: { params: { providerId: string } }
 ) {
   try {
-    const providerId = await params.providerId;
     await dbConnect();
+    
+    const { providerId } = params;
+    
+    if (!providerId) {
+      return NextResponse.json(
+        { error: 'Provider ID is required' },
+        { status: 400 }
+      );
+    }
     
     const provider = await LoanProvider.findById(providerId);
     
@@ -18,12 +26,13 @@ export async function GET(
         { status: 404 }
       );
     }
-
+    
     return NextResponse.json(provider);
+    
   } catch (error) {
-    console.error('Error fetching provider:', error);
+    console.error('Error fetching loan provider:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch provider' },
+      { error: 'Failed to fetch loan provider' },
       { status: 500 }
     );
   }
