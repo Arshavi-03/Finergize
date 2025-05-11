@@ -1,6 +1,46 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import axios from 'axios';
 
+// Define interfaces for our survey data types
+interface SurveyResponse {
+  questionId: string;
+  response: string | number | string[];
+  timestamp: Date;
+}
+
+interface PreliminarySurveyData {
+  location: string;
+  age: string;
+  interest: string;
+  literacy_level: string;
+  completedAt?: Date;
+}
+
+interface RecommendationFeature {
+  id: string;
+  name: string;
+  score: number;
+  explanation: string;
+  tip: string;
+}
+
+interface UserProfile {
+  knowledge_level: string;
+  income_level: string;
+}
+
+interface RecommendationResult {
+  prioritized_features: RecommendationFeature[];
+  user_profile: UserProfile;
+  generatedAt?: Date;
+}
+
+interface SurveyResponsesObject {
+  [key: string]: string | number | string[];
+}
+
+// Schema for security events
 const securityEventSchema = new mongoose.Schema({
   type: {
     type: String,
@@ -15,6 +55,54 @@ const securityEventSchema = new mongoose.Schema({
   metadata: mongoose.Schema.Types.Mixed
 });
 
+// Schema for survey responses
+const surveyResponseSchema = new mongoose.Schema({
+  questionId: String,
+  response: mongoose.Schema.Types.Mixed, // Can be string, number, or array
+  timestamp: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: false });
+
+// Schema for preliminary survey data
+const preliminarySurveySchema = new mongoose.Schema({
+  location: String,
+  age: String,
+  interest: String,
+  literacy_level: String,
+  completedAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: false });
+
+// Schema for recommendations
+const recommendationSchema = new mongoose.Schema({
+  id: String,
+  name: String,
+  score: Number,
+  explanation: String,
+  tip: String
+}, { _id: false });
+
+// Schema for user profile from recommendations
+const userProfileSchema = new mongoose.Schema({
+  knowledge_level: String,
+  income_level: String
+}, { _id: false });
+
+// Schema for full recommendation results
+const recommendationResultSchema = new mongoose.Schema({
+  prioritized_features: [recommendationSchema],
+  user_profile: userProfileSchema,
+  generatedAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: false });
+
+// Main user schema with survey section added
 const userSchema = new mongoose.Schema({
   name: { 
     type: String, 
@@ -51,6 +139,19 @@ const userSchema = new mongoose.Schema({
     default: 'english' 
   },
 
+  // Add survey section
+  survey: {
+    preliminary: preliminarySurveySchema,
+    responses: [surveyResponseSchema],
+    completed: {
+      type: Boolean,
+      default: false
+    },
+    completedAt: Date,
+    recommendations: recommendationResultSchema
+  },
+
+  // Keep existing security section
   security: {
     biometric: {
       enabled: { 
@@ -131,23 +232,89 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Add interface for User document
+interface UserDocument extends mongoose.Document {
+  name: string;
+  phone: string;
+  village: string;
+  district: string;
+  state: string;
+  pincode: string;
+  aadhaarNumber: string;
+  preferredLanguage: string;
+  survey?: {
+    preliminary?: PreliminarySurveyData;
+    responses: SurveyResponse[];
+    completed: boolean;
+    completedAt?: Date;
+    recommendations?: RecommendationResult;
+  };
+  security: {
+    biometric: {
+      enabled: boolean;
+      deviceId?: string;
+      lastVerified?: Date;
+    };
+    pin: {
+      enabled: boolean;
+      value?: string;
+      lastChanged?: Date;
+      attempts: number;
+      blocked: boolean;
+      blockExpires?: Date;
+      requiresChange: boolean;
+    };
+    previousPins: string[];
+    phoneVerified: boolean;
+    phoneVerificationCode?: string;
+    phoneVerificationExpiry?: Date;
+    events: Array<{
+      type: string;
+      timestamp: Date;
+      details?: string;
+      metadata?: Record<string, unknown>;
+    }>;
+    lastSuccessfulLogin?: Date;
+    lastFailedLogin?: Date;
+  };
+  
+  // Methods
+  isPinBlocked(): boolean;
+  verifyPin(pin: string): Promise<boolean>;
+  recordFailedPinAttempt(): Promise<void>;
+  resetPinAttempts(): Promise<void>;
+  setPin(pin: string): Promise<void>;
+  resetPin(): Promise<string>;
+  changePin(currentPin: string, newPin: string): Promise<void>;
+  setPreliminarySurvey(data: PreliminarySurveyData): Promise<PreliminarySurveyData>;
+  fetchSurveyQuestions(): Promise<unknown[]>;
+  addSurveyResponse(questionId: string, response: string | number | string[]): Promise<SurveyResponse[]>;
+  submitSurvey(): Promise<RecommendationResult>;
+  getSurveyResponsesForApi(): SurveyResponsesObject;
+  resetSurvey(): Promise<{ responses: SurveyResponse[]; completed: boolean }>;
+}
+
+// Maintain existing indexes
 userSchema.index({ 'security.pin.enabled': 1 });
 userSchema.index({ phone: 1 });
 userSchema.index({ aadhaarNumber: 1 });
+// Add index for survey completion status
+userSchema.index({ 'survey.completed': 1 });
 
-userSchema.methods.isPinBlocked = function() {
+// Maintain all existing methods
+userSchema.methods.isPinBlocked = function(this: UserDocument): boolean {
   if (!this.security.pin.blocked) return false;
   if (!this.security.pin.blockExpires) return false;
   return new Date() < this.security.pin.blockExpires;
 };
 
-userSchema.methods.verifyPin = async function(pin: string): Promise<boolean> {
+userSchema.methods.verifyPin = async function(this: UserDocument, pin: string): Promise<boolean> {
   if (this.isPinBlocked()) {
-    const timeLeft = Math.ceil((this.security.pin.blockExpires.getTime() - Date.now()) / (1000 * 60));
+    const timeLeft = Math.ceil((this.security.pin.blockExpires!.getTime() - Date.now()) / (1000 * 60));
     throw new Error(`PIN is blocked. Try again in ${timeLeft} minutes.`);
   }
 
-  const isValid = await bcrypt.compare(pin, this.security.pin.value);
+  const isValid = await bcrypt.compare(pin, this.security.pin.value!);
   
   if (!isValid) {
     await this.recordFailedPinAttempt();
@@ -166,7 +333,7 @@ userSchema.methods.verifyPin = async function(pin: string): Promise<boolean> {
   return true;
 };
 
-userSchema.methods.recordFailedPinAttempt = async function() {
+userSchema.methods.recordFailedPinAttempt = async function(this: UserDocument): Promise<void> {
   this.security.pin.attempts += 1;
   this.security.lastFailedLogin = new Date();
   
@@ -184,7 +351,7 @@ userSchema.methods.recordFailedPinAttempt = async function() {
   await this.save();
 };
 
-userSchema.methods.resetPinAttempts = async function() {
+userSchema.methods.resetPinAttempts = async function(this: UserDocument): Promise<void> {
   this.security.pin.attempts = 0;
   this.security.pin.blocked = false;
   this.security.pin.blockExpires = undefined;
@@ -192,7 +359,7 @@ userSchema.methods.resetPinAttempts = async function() {
   await this.save();
 };
 
-userSchema.methods.setPin = async function(pin: string): Promise<void> {
+userSchema.methods.setPin = async function(this: UserDocument, pin: string): Promise<void> {
   if (!/^\d{4}$/.test(pin)) {
     throw new Error('PIN must be exactly 4 digits');
   }
@@ -233,7 +400,7 @@ userSchema.methods.setPin = async function(pin: string): Promise<void> {
   await this.save();
 };
 
-userSchema.methods.resetPin = async function(): Promise<string> {
+userSchema.methods.resetPin = async function(this: UserDocument): Promise<string> {
   const tempPin = Math.floor(1000 + Math.random() * 9000).toString();
   await this.setPin(tempPin);
   
@@ -248,7 +415,7 @@ userSchema.methods.resetPin = async function(): Promise<string> {
   return tempPin;
 };
 
-userSchema.methods.changePin = async function(currentPin: string, newPin: string): Promise<void> {
+userSchema.methods.changePin = async function(this: UserDocument, currentPin: string, newPin: string): Promise<void> {
   const isValid = await this.verifyPin(currentPin);
   if (!isValid) {
     throw new Error('Current PIN is incorrect');
@@ -265,5 +432,166 @@ userSchema.methods.changePin = async function(currentPin: string, newPin: string
   await this.save();
 };
 
-export default mongoose.models.User || mongoose.model('User', userSchema);
+// Add new methods for survey functionality
 
+// Set preliminary survey data
+userSchema.methods.setPreliminarySurvey = async function(this: UserDocument, data: PreliminarySurveyData): Promise<PreliminarySurveyData> {
+  // Initialize survey if it doesn't exist
+  if (!this.survey) {
+    this.survey = {
+      responses: [],
+      completed: false
+    };
+  }
+  
+  this.survey.preliminary = {
+    location: data.location,
+    age: data.age,
+    interest: data.interest,
+    literacy_level: data.literacy_level,
+    completedAt: new Date()
+  };
+  
+  await this.save();
+  return this.survey.preliminary;
+};
+
+// Fetch survey questions from the API
+userSchema.methods.fetchSurveyQuestions = async function(this: UserDocument): Promise<unknown[]> {
+  if (!this.survey || !this.survey.preliminary) {
+    throw new Error('Preliminary survey data must be set before fetching questions');
+  }
+  
+  try {
+    // Build query params from preliminary data
+    const params = new URLSearchParams({
+      location: this.survey.preliminary.location,
+      age: this.survey.preliminary.age,
+      interest: this.survey.preliminary.interest,
+      literacy_level: this.survey.preliminary.literacy_level
+    });
+    
+    // Call the external API
+    const response = await axios.get(`https://finergize-recommend.onrender.com/api/survey?${params.toString()}`);
+    
+    if (!response.data.success || !Array.isArray(response.data.survey)) {
+      throw new Error('Invalid response from survey API');
+    }
+    
+    return response.data.survey;
+  } catch (error) {
+    console.error('Error fetching survey questions:', error);
+    throw new Error('Failed to fetch survey questions');
+  }
+};
+
+// Add or update a survey response
+userSchema.methods.addSurveyResponse = async function(
+  this: UserDocument, 
+  questionId: string, 
+  response: string | number | string[]
+): Promise<SurveyResponse[]> {
+  // Initialize survey if it doesn't exist
+  if (!this.survey) {
+    this.survey = {
+      responses: [],
+      completed: false
+    };
+  }
+  
+  // Find if response exists already
+  const existingIndex = this.survey.responses.findIndex((r: SurveyResponse) => r.questionId === questionId);
+  
+  if (existingIndex >= 0) {
+    // Update existing response
+    this.survey.responses[existingIndex].response = response;
+    this.survey.responses[existingIndex].timestamp = new Date();
+  } else {
+    // Add new response
+    this.survey.responses.push({
+      questionId,
+      response,
+      timestamp: new Date()
+    });
+  }
+  
+  await this.save();
+  return this.survey.responses;
+};
+
+// Submit survey and get recommendations
+userSchema.methods.submitSurvey = async function(this: UserDocument): Promise<RecommendationResult> {
+  if (!this.survey || !this.survey.preliminary || this.survey.responses.length === 0) {
+    throw new Error('Survey data is incomplete');
+  }
+  
+  try {
+    // Convert survey responses from array to object format for the API
+    const responseObj: SurveyResponsesObject = {};
+    this.survey.responses.forEach((item: SurveyResponse) => {
+      responseObj[item.questionId] = item.response;
+    });
+    
+    // Build request payload
+    const requestData = {
+      responses: responseObj,
+      user_context: {
+        location: this.survey.preliminary.location,
+        age: this.survey.preliminary.age,
+        interest: this.survey.preliminary.interest,
+        literacy_level: this.survey.preliminary.literacy_level
+      }
+    };
+    
+    // Call the recommendations API
+    const response = await axios.post('https://finergize-recommend.onrender.com/api/recommend', requestData);
+    
+    if (!response.data.success || !response.data.recommendations) {
+      throw new Error('Invalid response from recommendation API');
+    }
+    
+    // Save recommendations
+    this.survey.recommendations = {
+      prioritized_features: response.data.recommendations.prioritized_features,
+      user_profile: response.data.recommendations.user_profile,
+      generatedAt: new Date()
+    };
+    
+    // Mark survey as completed
+    this.survey.completed = true;
+    this.survey.completedAt = new Date();
+    
+    await this.save();
+    return this.survey.recommendations;
+  } catch (error) {
+    console.error('Error submitting survey:', error);
+    throw new Error('Failed to get recommendations');
+  }
+};
+
+// Get survey responses in a format suitable for the recommendation API
+userSchema.methods.getSurveyResponsesForApi = function(this: UserDocument): SurveyResponsesObject {
+  if (!this.survey || !this.survey.responses) {
+    return {};
+  }
+  
+  const responseObj: SurveyResponsesObject = {};
+  this.survey.responses.forEach((item: SurveyResponse) => {
+    responseObj[item.questionId] = item.response;
+  });
+  
+  return responseObj;
+};
+
+// Reset survey data
+userSchema.methods.resetSurvey = async function(this: UserDocument): Promise<{ responses: SurveyResponse[]; completed: boolean }> {
+  this.survey = {
+    responses: [],
+    completed: false
+  };
+  await this.save();
+  return this.survey;
+};
+
+export default (mongoose.models.User as mongoose.Model<UserDocument>) || 
+  mongoose.model<UserDocument>('User', userSchema);

@@ -8,6 +8,7 @@ import Navbar from "@/components/Navbar";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { UserProvider } from "@/contexts/UserContext";
+import { SurveyProvider } from "@/contexts/SurveyContext";
 import NextAuthProvider from "@/components/providers/session-provider";
 import ChatbotProvider from "@/components/providers/ChatbotProvider";
 
@@ -55,11 +56,13 @@ export default function ClientLayout({
         <NextAuthProvider>
           <AuthProvider>
             <UserProvider>
-              <Navbar />
-              <ChatbotProvider>
-                {children}
-              </ChatbotProvider>
-              <Toaster />
+              <SurveyProvider>
+                <Navbar />
+                <ChatbotProvider>
+                  {children}
+                </ChatbotProvider>
+                <Toaster />
+              </SurveyProvider>
             </UserProvider>
           </AuthProvider>
         </NextAuthProvider>
