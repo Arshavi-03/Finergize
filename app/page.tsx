@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Wallet, Users, BookOpen, TrendingUp, Building, Phone, Clock, CreditCard, AlertCircle, Sparkles } from "lucide-react";
 import Link from "next/link";
 import React, { useState, useEffect, useRef } from "react";
@@ -8,6 +7,11 @@ import { cn } from "@/lib/utils";
 import { AnimatePresence, motion, useScroll, useTransform, useMotionValueEvent, useMotionValue, useSpring, MotionValue } from "framer-motion";
 import dynamic from 'next/dynamic';
 
+// Import survey components
+import SurveyWrapper from '@/components/survey/SurveyWrapper';
+import RecommendedSection from '@/components/survey/RecommendedSection';
+import SurveyButton from '@/components/survey/SurveyButton';
+import FeatureLinkHandler from '@/components/FeatureLinkHandler';
 // Dynamically import the 3D logo component with no SSR
 const AnimatedLogo = dynamic(() => import('@/components/AnimatedLogo'), {
   ssr: false,
@@ -561,6 +565,12 @@ export default function Home(): JSX.Element {
 
   return (
     <main className="min-h-screen bg-[#0A0A0A] relative overflow-hidden" suppressHydrationWarning={true}>
+      {/* Add Survey Components */}
+      <SurveyWrapper />
+      <div className="fixed bottom-5 right-5 z-40">
+        <SurveyButton />
+      </div>
+      
       {/* Progress indicator - Only rendered on client */}
       {hasMounted && (
         <motion.div 
@@ -603,25 +613,25 @@ export default function Home(): JSX.Element {
             </motion.div>
 
            {/* 3D Logo Section */}
-<motion.div
-  initial={{ opacity: 0, scale: 0.8 }}
-  animate={{ opacity: 1, scale: 1 }}
-  transition={{ duration: 1.2, type: "spring" }}
-  className="relative mb-2 w-full"
->
-  <div className="max-w-md mx-auto h-[300px]">
-    <ClientOnly>
-      {/* Remove the Suspense wrapper since we're handling loading states in the AnimatedLogo component */}
-      <AnimatedLogo />
-    </ClientOnly>
-  </div>
-  
-  {/* Animated glows behind the logo */}
-  <div className="absolute inset-0 pointer-events-none -z-10">
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-  </div>
-</motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 1.2, type: "spring" }}
+              className="relative mb-2 w-full"
+            >
+              <div className="max-w-md mx-auto h-[300px]">
+                <ClientOnly>
+                  {/* Remove the Suspense wrapper since we're handling loading states in the AnimatedLogo component */}
+                  <AnimatedLogo />
+                </ClientOnly>
+              </div>
+              
+              {/* Animated glows behind the logo */}
+              <div className="absolute inset-0 pointer-events-none -z-10">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+              </div>
+            </motion.div>
 
             <motion.h1 
               className="font-bold mb-6"
@@ -764,6 +774,9 @@ export default function Home(): JSX.Element {
         </ClientOnly>
       </section>
 
+      {/* Personalized Recommendations Section */}
+      <RecommendedSection />
+
       {/* Features Section with Updated Heading */}
       <section className="py-20 px-4 relative">
         {/* Radial blur background behind the section */}
@@ -856,106 +869,111 @@ export default function Home(): JSX.Element {
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {features.map((feature, idx) => (
+  {features.map((feature, idx) => (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: idx * 0.1 }}
+      viewport={{ once: true, margin: "-50px" }}
+      key={idx}
+    >
+      <FeatureLinkHandler
+        href={feature.href}
+        className="relative group block p-2 h-full w-full"
+        onClick={() => setHoveredIndex(null)}
+      >
+        <div
+          className="relative group block p-2 h-full w-full"
+          onMouseEnter={() => setHoveredIndex(idx)}
+          onMouseLeave={() => setHoveredIndex(null)}
+        >
+          <AnimatePresence>
+            {hoveredIndex === idx && (
               <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: idx * 0.1 }}
-                viewport={{ once: true, margin: "-50px" }}
-                key={idx}
+                className="absolute inset-0 h-full w-full"
+                layoutId="hoverBackground"
+                initial={{ opacity: 0 }}
+                animate={{
+                  opacity: 1,
+                  transition: { duration: 0.15 },
+                }}
+                exit={{
+                  opacity: 0,
+                  transition: { duration: 0.15, delay: 0.2 },
+                }}
               >
-                <Link
-                  href={feature.href}
-                  className="relative group block p-2 h-full w-full"
-                  onMouseEnter={() => setHoveredIndex(idx)}
-                  onMouseLeave={() => setHoveredIndex(null)}
-                >
-                  <AnimatePresence>
-                    {hoveredIndex === idx && (
-                      <motion.div
-                        className="absolute inset-0 h-full w-full"
-                        layoutId="hoverBackground"
-                        initial={{ opacity: 0 }}
-                        animate={{
-                          opacity: 1,
-                          transition: { duration: 0.15 },
-                        }}
-                        exit={{
-                          opacity: 0,
-                          transition: { duration: 0.15, delay: 0.2 },
-                        }}
-                      >
-                        <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20 backdrop-blur-md border border-white/10"></div>
-                        
-                        {/* Animated sparkles on hover - Client side only */}
-                        <ClientOnly>
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Spark 
-                              key={i}
-                              style={{ 
-                                left: `${Math.random() * 100}%`, 
-                                top: `${Math.random() * 100}%` 
-                              }}
-                              color={
-                                idx % 3 === 0 ? "#93c5fd" : 
-                                idx % 3 === 1 ? "#c4b5fd" : 
-                                "#f9a8d4"
-                              }
-                              size={Math.random() * 3 + 1}
-                              delay={Math.random() * 1}
-                              duration={Math.random() * 2 + 1}
-                            />
-                          ))}
-                        </ClientOnly>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  <HoverCard>
-                    <ClientOnly>
-                      <TiltCard>
-                        <div className={`p-4 rounded-lg bg-gradient-to-r ${feature.gradient} group-hover:scale-110 transition-transform duration-300`}>
-                          <motion.div
-                            animate={hoveredIndex === idx ? { 
-                              y: [0, -5, 0],
-                              rotate: [0, 5, 0],
-                            } : {}}
-                            transition={{ duration: 2, repeat: hoveredIndex === idx ? Infinity : 0, ease: "easeInOut" }}
-                          >
-                            {feature.icon}
-                          </motion.div>
-                        </div>
-                        <CardTitle>{feature.title}</CardTitle>
-                        <CardDescription>{feature.description}</CardDescription>
-                        <div className="mt-4 text-blue-400 hover:text-blue-300 flex items-center">
-                          <TextGradientOnHover>Learn more</TextGradientOnHover>
-                          <motion.div
-                            animate={hoveredIndex === idx ? { x: [0, 5, 0] } : {}}
-                            transition={{ duration: 1, repeat: hoveredIndex === idx ? Infinity : 0 }}
-                          >
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                          </motion.div>
-                        </div>
-                      </TiltCard>
-                    </ClientOnly>
-                    
-                    {/* Fallback for server rendering */}
-                    {!hasMounted && (
-                      <>
-                        <div className={`p-4 rounded-lg bg-gradient-to-r ${feature.gradient}`}>
-                          {feature.icon}
-                        </div>
-                        <CardTitle>{feature.title}</CardTitle>
-                        <CardDescription>{feature.description}</CardDescription>
-                        <div className="mt-4 text-blue-400 flex items-center">
-                          Learn more <ArrowRight className="ml-2 h-4 w-4" />
-                        </div>
-                      </>
-                    )}
-                  </HoverCard>
-                </Link>
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20 backdrop-blur-md border border-white/10"></div>
+                
+                {/* Animated sparkles on hover - Client side only */}
+                <ClientOnly>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Spark 
+                      key={i}
+                      style={{ 
+                        left: `${Math.random() * 100}%`, 
+                        top: `${Math.random() * 100}%` 
+                      }}
+                      color={
+                        idx % 3 === 0 ? "#93c5fd" : 
+                        idx % 3 === 1 ? "#c4b5fd" : 
+                        "#f9a8d4"
+                      }
+                      size={Math.random() * 3 + 1}
+                      delay={Math.random() * 1}
+                      duration={Math.random() * 2 + 1}
+                    />
+                  ))}
+                </ClientOnly>
               </motion.div>
-            ))}
-          </div>
+            )}
+          </AnimatePresence>
+          <HoverCard>
+            <ClientOnly>
+              <TiltCard>
+                <div className={`p-4 rounded-lg bg-gradient-to-r ${feature.gradient} group-hover:scale-110 transition-transform duration-300`}>
+                  <motion.div
+                    animate={hoveredIndex === idx ? { 
+                      y: [0, -5, 0],
+                      rotate: [0, 5, 0],
+                    } : {}}
+                    transition={{ duration: 2, repeat: hoveredIndex === idx ? Infinity : 0, ease: "easeInOut" }}
+                  >
+                    {feature.icon}
+                  </motion.div>
+                </div>
+                <CardTitle>{feature.title}</CardTitle>
+                <CardDescription>{feature.description}</CardDescription>
+                <div className="mt-4 text-blue-400 hover:text-blue-300 flex items-center">
+                  <TextGradientOnHover>Learn more</TextGradientOnHover>
+                  <motion.div
+                    animate={hoveredIndex === idx ? { x: [0, 5, 0] } : {}}
+                    transition={{ duration: 1, repeat: hoveredIndex === idx ? Infinity : 0 }}
+                  >
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </motion.div>
+                </div>
+              </TiltCard>
+            </ClientOnly>
+            
+            {/* Fallback for server rendering */}
+            {!hasMounted && (
+              <>
+                <div className={`p-4 rounded-lg bg-gradient-to-r ${feature.gradient}`}>
+                  {feature.icon}
+                </div>
+                <CardTitle>{feature.title}</CardTitle>
+                <CardDescription>{feature.description}</CardDescription>
+                <div className="mt-4 text-blue-400 flex items-center">
+                  Learn more <ArrowRight className="ml-2 h-4 w-4" />
+                </div>
+              </>
+            )}
+          </HoverCard>
+        </div>
+      </FeatureLinkHandler>
+    </motion.div>
+  ))}
+</div>
         </div>
       </section>
 

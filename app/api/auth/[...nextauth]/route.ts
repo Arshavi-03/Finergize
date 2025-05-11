@@ -55,7 +55,8 @@ export const authOptions: AuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
-    signIn: '/login',
+    signIn: '/login', // This should match your login page path
+    error: '/login', // Add this to handle errors more gracefully
   },
   callbacks: {
     async jwt({ token, user }) {

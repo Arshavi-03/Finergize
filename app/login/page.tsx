@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -17,12 +17,28 @@ interface LoginData {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [loginData, setLoginData] = useState<LoginData>({
     phone: "",
     aadhaarNumber: "",
   });
+  
+  // Get the callbackUrl from the URL if present
+  const callbackUrl = searchParams.get('callbackUrl') || '/banking/dashboard';
+  
+  // Check for error in URL parameters
+  useEffect(() => {
+    const error = searchParams.get('error');
+    if (error) {
+      toast({
+        title: "Authentication Error",
+        description: error === 'CredentialsSignin' ? "Invalid credentials" : "An error occurred",
+        variant: "destructive"
+      });
+    }
+  }, [searchParams, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +49,7 @@ export default function LoginPage() {
         phone: loginData.phone,
         aadhaarNumber: loginData.aadhaarNumber,
         redirect: false,
-        callbackUrl: '/banking/dashboard'
+        callbackUrl
       });
 
       console.log("Login result:", result);
@@ -44,7 +60,7 @@ export default function LoginPage() {
           description: "Welcome back!",
           variant: "default"
         });
-        router.push("/banking/dashboard");
+        router.push(callbackUrl);
       } else {
         throw new Error(result?.error || "Invalid credentials");
       }
@@ -185,7 +201,7 @@ export default function LoginPage() {
                   transition={{ delay: 0.5 }}
                 >
                   <p className="text-center text-sm text-purple-300/60 mt-4">
-                    Don't have an account?{" "}
+                    Don&apos;t have an account?{" "}
                     <button
                       type="button"
                       onClick={() => router.push("/register")}
